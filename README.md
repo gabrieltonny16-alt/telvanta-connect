@@ -1,23 +1,27 @@
-# BingwaPulse Connect
+# BingwaPulse
 
-BingwaPulse Connect is the companion connectivity component for the Android and Web workspaces. It is responsible for authenticated nearby pairing, device trust, connection health and controlled synchronization—not for payments or bundle fulfilment.
+**Your Bundles. Your Business. Automated.**
 
-## Current status
-This repository now defines the first implementation contract. A production transport is **not yet enabled**. No device discovery, pairing, background sync or remote access should be represented as working until implemented and security-tested.
+This project is delivered through three coordinated repositories:
 
-## Pairing requirements
-1. Both devices explicitly enter pairing mode.
-2. Pairing uses a short-lived, single-use challenge and user confirmation on both sides.
-3. Establish a mutually authenticated encrypted session; never trust a device based on its name or proximity alone.
-4. Grant narrow scopes and show exactly what data can be synchronized.
-5. Support revoke, disconnect, expiry, replay protection and audit events.
-6. Queue local changes offline; deduplicate by stable operation ID on reconciliation.
-7. Surface conflicts for review rather than silently overwriting financial records.
+- **Android** — native, offline-first business operations.
+- **Connect** — device trust, pairing and synchronization services.
+- **Web** — browser workspace.
 
-## Non-goals
-- No M-PESA PIN or payment credential handling.
-- No automatic USSD, SMS or bundle purchases.
-- No invisible device access or silent pairing.
-- Nearby transport is not a substitute for internet connectivity between distant devices.
+The Connect repository hosts the shared API service used by the clients.
 
-See [the integration contract](docs/INTEGRATION_CONTRACT.md).
+## Current implementation status
+- Android local business workflows and SQLite persistence.
+- Web local-first workspace.
+- Connect consent-state core with automated tests.
+- Shared API with tenant-scoped accounts, short-lived sessions, revision-checked sync, idempotency and pull cursors.
+- No live payment collection, SMS, USSD or automatic bundle fulfilment.
+
+## Start the shared API
+See [API setup](api/README.md). Local development uses PostgreSQL via Docker Compose.
+
+## Client integration status
+The shared API is now available as a service contract. Android and Web still require authenticated client adapters and account/sync UI before records can move between devices. The Kotlin pairing core does not itself establish a cryptographic nearby connection.
+
+## Safety
+Client-created transaction records are unverified notes. Clients cannot claim payment or fulfilment verification. Never store M-PESA PINs or API secrets in app data or source control.
