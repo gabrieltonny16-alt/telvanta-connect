@@ -40,3 +40,5 @@ jobs:
       - name: Run API tests (unit + PostgreSQL integration)
         working-directory: api
         run: npm test
+      - name: Build API container
+        run: docker build -f api/Dockerfile -t bingwapulse-api .
