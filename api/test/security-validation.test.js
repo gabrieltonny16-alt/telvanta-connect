@@ -26,5 +26,5 @@ test('sync operation validation rejects verified claims and unsafe transaction e
   const entityId='123e4567-e89b-42d3-a456-426614174000';
   assert.throws(()=>validateOperation({entityId,entityType:'order',action:'upsert',payload:{status:'VERIFIED'}}));
   assert.throws(()=>validateOperation({entityId,entityType:'transaction_note',action:'delete',payload:{}}));
-  assert.equal(validateOperation({entityId,entityType:'offer',action:'upsert',payload:{name:'1GB'}}).expectedRevision,null);
+  assert.equal(validateOperation({operationId:'123e4567-e89b-42d3-a456-426614174001',entityId,entityType:'offer',action:'upsert',payload:{name:'1GB'}}).expectedRevision,null);
 });
