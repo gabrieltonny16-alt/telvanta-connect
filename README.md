@@ -1,23 +1,27 @@
 # BingwaPulse Connect
 
-BingwaPulse Connect is the companion connectivity component for the Android and Web workspaces. It is responsible for authenticated nearby pairing, device trust, connection health and controlled synchronization—not for payments or bundle fulfilment.
+BingwaPulse Connect provides device trust, pairing and the shared synchronization API for the Android and Web workspaces.
 
-## Current status
-This repository now defines the first implementation contract. A production transport is **not yet enabled**. No device discovery, pairing, background sync or remote access should be represented as working until implemented and security-tested.
+## Implemented
+- Consent-first Kotlin pairing state machine with short expiry, scoped approval, rejection, revocation and tests.
+- Shared Node.js API with PostgreSQL persistence.
+- Tenant-isolated account registration and login.
+- Salted scrypt password hashing and short-lived signed bearer sessions.
+- Revision-checked, idempotent sync operations and tenant-scoped pull cursors.
+- API-side rejection of client claims that a payment is verified or a bundle is delivered.
 
-## Pairing requirements
-1. Both devices explicitly enter pairing mode.
-2. Pairing uses a short-lived, single-use challenge and user confirmation on both sides.
-3. Establish a mutually authenticated encrypted session; never trust a device based on its name or proximity alone.
-4. Grant narrow scopes and show exactly what data can be synchronized.
-5. Support revoke, disconnect, expiry, replay protection and audit events.
-6. Queue local changes offline; deduplicate by stable operation ID on reconciliation.
-7. Surface conflicts for review rather than silently overwriting financial records.
+## Run the API locally
+Requirements: Node.js 22+ and Docker Compose.
 
-## Non-goals
-- No M-PESA PIN or payment credential handling.
-- No automatic USSD, SMS or bundle purchases.
-- No invisible device access or silent pairing.
-- Nearby transport is not a substitute for internet connectivity between distant devices.
+1. Copy `.env.example` to `.env` and set a unique random `JWT_SECRET` of at least 32 bytes.
+2. Start PostgreSQL: `docker compose up -d db`.
+3. Install dependencies: `cd api && npm install`.
+4. Start: `npm run dev`.
 
-See [the integration contract](docs/INTEGRATION_CONTRACT.md).
+The API listens on port 8080. See [API request and deployment guide](api/README.md).
+
+## Client integration
+Android and Web now include API account and synchronization adapters. Configure both to use the same deployed HTTPS API and account/tenant. End-to-end device testing against a deployed database is still required.
+
+## Security boundary
+The pairing state machine is not a cryptographic transport and does not establish a nearby connection yet. Production deployment still requires HTTPS, managed secrets, backups, monitoring, email verification, password reset, refresh-token rotation, audit retention and threat modelling. No live payment or fulfilment provider is connected.

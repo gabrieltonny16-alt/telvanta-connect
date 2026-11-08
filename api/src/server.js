@@ -1,0 +1,13 @@
+import pg from 'pg';
+import { createApp } from './app.js';
+const { Pool } = pg;
+const required = ['DATABASE_URL','JWT_SECRET'];
+for (const key of required) if (!process.env[key]) throw new Error(`Missing required environment variable: ${key}`);
+if (Buffer.byteLength(process.env.JWT_SECRET) < 32) throw new Error('JWT_SECRET must contain at least 32 bytes');
+const pool = new Pool({ connectionString:process.env.DATABASE_URL,ssl:process.env.PGSSL==='true'?{rejectUnauthorized:true}:undefined,max:10,idleTimeoutMillis:30000,connectionTimeoutMillis:5000 });
+const app = createApp({ pool });
+const port = Number(process.env.PORT || 8080);
+const server = app.listen(port,()=>process.stdout.write(`BingwaPulse API listening on ${port}\n`));
+const shutdown = async () => { server.close(); await pool.end(); process.exit(0); };
+process.on('SIGTERM',shutdown);
+process.on('SIGINT',shutdown);

@@ -1,0 +1,44 @@
+name: BingwaPulse API checks
+on:
+  push:
+    branches: [ "main", "feature/**" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: bingwapulse_test
+          POSTGRES_USER: bingwapulse
+          POSTGRES_PASSWORD: bingwapulse
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U bingwapulse -d bingwapulse_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://bingwapulse:bingwapulse@localhost:5432/bingwapulse_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install API dependencies
+        working-directory: api
+        run: npm install
+      - name: Check syntax
+        working-directory: api
+        run: npm run check
+      - name: Run API tests (unit + PostgreSQL integration)
+        working-directory: api
+        run: npm test
+      - name: Build API container
+        run: docker build -f api/Dockerfile -t bingwapulse-api .
