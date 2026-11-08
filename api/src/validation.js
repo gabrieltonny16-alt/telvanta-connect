@@ -1,5 +1,3 @@
-import { randomUUID } from 'node:crypto';
-
 export const ENTITY_TYPES = new Set(['offer','customer','order','transaction_note']);
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -15,8 +13,8 @@ export function validateRegistration(body = {}) {
   return { displayName, tenantName, email, password };
 }
 export function validateOperation(input = {}) {
-  const operationId = input.operationId || randomUUID();
-  if (!UUID.test(operationId) || !UUID.test(input.entityId || '')) throw new Error('Operation and entity IDs must be UUIDs');
+  const operationId = input.operationId;
+  if (!UUID.test(operationId || '') || !UUID.test(input.entityId || '')) throw new Error('Operation and entity IDs must be UUIDs');
   if (!ENTITY_TYPES.has(input.entityType)) throw new Error('Unsupported entity type');
   if (!['upsert','delete'].includes(input.action)) throw new Error('Unsupported operation');
   if (input.entityType === 'transaction_note' && input.action !== 'upsert') throw new Error('Transaction notes are immutable');
