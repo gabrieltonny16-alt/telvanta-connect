@@ -7,10 +7,11 @@
     "node": ">=22"
   },
   "scripts": {
-    "start": "node --env-file=../.env src/server.js",
+    "start": "node src/server.js",
     "dev": "node --env-file=../.env --watch src/server.js",
     "test": "node --test",
-    "check": "node --check src/server.js && node --check src/app.js"
+    "check": "node --check src/server.js && node --check src/app.js",
+    "migrate": "node --env-file=../.env src/migrate.js"
   },
   "dependencies": {
     "cors": "2.8.5",
