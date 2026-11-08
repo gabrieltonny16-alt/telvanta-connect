@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import { hashPassword, verifyPassword, signToken, verifyToken } from './security.js';
 import { validateRegistration, validateOperation } from './validation.js';
 
@@ -9,7 +10,7 @@ export function createApp({ pool, env = process.env }) {
   const origins = String(env.CORS_ORIGINS || '').split(',').map(x => x.trim()).filter(Boolean);
   app.disable('x-powered-by');
   app.use(helmet());
-  app.use(cors({ origin(origin, cb) { if (!origin || origins.length === 0 || origins.includes(origin)) return cb(null, true); cb(new Error('Origin not allowed')); }, allowedHeaders: ['Content-Type','Authorization'], methods: ['GET','POST','OPTIONS'] }));
+  app.use(cors({ origin(origin, cb) { if (!origin || origins.includes(origin)) return cb(null, true); cb(new Error('Origin not allowed')); }, allowedHeaders: ['Content-Type','Authorization'], methods: ['GET','POST','OPTIONS'] }));
   app.use(express.json({ limit: '256kb', strict: true }));
 
   const auth = async (req, res, next) => {
@@ -24,12 +25,13 @@ export function createApp({ pool, env = process.env }) {
     } catch { return res.status(401).json({ error: 'Invalid or expired session' }); }
   };
 
+  const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: 'draft-7', legacyHeaders: false });
   app.get('/health', async (_req, res) => {
     try { await pool.query('SELECT 1'); res.json({ status: 'ok', service: 'bingwapulse-api', database: 'connected' }); }
     catch { res.status(503).json({ status: 'unavailable', service: 'bingwapulse-api' }); }
   });
 
-  app.post('/v1/auth/register', async (req, res) => {
+  app.post('/v1/auth/register', authLimiter, async (req, res) => {
     let input;
     try { input = validateRegistration(req.body); }
     catch (e) { return res.status(400).json({ error: e.message }); }
@@ -50,7 +52,7 @@ export function createApp({ pool, env = process.env }) {
     } finally { client.release(); }
   });
 
-  app.post('/v1/auth/login', async (req, res) => {
+  app.post('/v1/auth/login', authLimiter, async (req, res) => {
     const email = String(req.body?.email || '').trim().toLowerCase();
     const password = String(req.body?.password || '');
     if (!email || !password) return res.status(400).json({ error: 'Email and password are required' });
@@ -82,7 +84,7 @@ export function createApp({ pool, env = process.env }) {
         const isConflict = row ? expected !== Number(row.revision) : expected !== null;
         if (isConflict) {
           await client.query('INSERT INTO sync_operations(tenant_id,operation_id,entity_type,entity_id,outcome,server_revision) VALUES($1,$2,$3,$4,$5,$6)', [req.user.tenant_id,op.operationId,op.entityType,op.entityId,'CONFLICT',row.revision]);
-          results.push({ operationId:op.operationId,outcome:'CONFLICT',serverRevision:Number(row.revision) });
+          results.push({ operationId:op.operationId,outcome:'CONFLICT',serverRevision:row ? Number(row.revision) : null });
           continue;
         }
         const revision = row ? Number(row.revision)+1 : 1;
