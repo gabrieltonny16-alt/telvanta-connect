@@ -1,27 +1,27 @@
-# BingwaPulse
+# BingwaPulse Connect
 
-**Your Bundles. Your Business. Automated.**
+BingwaPulse Connect provides device trust, pairing and the shared synchronization API for the Android and Web workspaces.
 
-This project is delivered through three coordinated repositories:
+## Implemented
+- Consent-first Kotlin pairing state machine with short expiry, scoped approval, rejection, revocation and tests.
+- Shared Node.js API with PostgreSQL persistence.
+- Tenant-isolated account registration and login.
+- Salted scrypt password hashing and short-lived signed bearer sessions.
+- Revision-checked, idempotent sync operations and tenant-scoped pull cursors.
+- API-side rejection of client claims that a payment is verified or a bundle is delivered.
 
-- **Android** — native, offline-first business operations.
-- **Connect** — device trust, pairing and synchronization services.
-- **Web** — browser workspace.
+## Run the API locally
+Requirements: Node.js 22+ and Docker Compose.
 
-The Connect repository hosts the shared API service used by the clients.
+1. Copy `.env.example` to `.env` and set a unique random `JWT_SECRET` of at least 32 bytes.
+2. Start PostgreSQL: `docker compose up -d db`.
+3. Install dependencies: `cd api && npm install`.
+4. Start: `npm run dev`.
 
-## Current implementation status
-- Android local business workflows and SQLite persistence.
-- Web local-first workspace.
-- Connect consent-state core with automated tests.
-- Shared API with tenant-scoped accounts, short-lived sessions, revision-checked sync, idempotency and pull cursors.
-- No live payment collection, SMS, USSD or automatic bundle fulfilment.
+The API listens on port 8080. See [API request and deployment guide](api/README.md).
 
-## Start the shared API
-See [API setup](api/README.md). Local development uses PostgreSQL via Docker Compose.
+## Client integration
+Android and Web now include API account and synchronization adapters. Configure both to use the same deployed HTTPS API and account/tenant. End-to-end device testing against a deployed database is still required.
 
-## Client integration status
-The shared API is now available as a service contract. Android and Web still require authenticated client adapters and account/sync UI before records can move between devices. The Kotlin pairing core does not itself establish a cryptographic nearby connection.
-
-## Safety
-Client-created transaction records are unverified notes. Clients cannot claim payment or fulfilment verification. Never store M-PESA PINs or API secrets in app data or source control.
+## Security boundary
+The pairing state machine is not a cryptographic transport and does not establish a nearby connection yet. Production deployment still requires HTTPS, managed secrets, backups, monitoring, email verification, password reset, refresh-token rotation, audit retention and threat modelling. No live payment or fulfilment provider is connected.
