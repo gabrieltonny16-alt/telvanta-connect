@@ -48,14 +48,16 @@ export function registerOtpRoutes(app, { pool, env }) {
     if (!['login', 'register'].includes(mode)) {
       return res.status(400).json({ error: 'Choose sign in or create account' });
     }
-    if (mode === 'register') {
-      const existing = await pool.query('SELECT id FROM users WHERE lower(email)=lower($1)', [email]);
-      if (existing.rowCount) return res.status(409).json({ error: 'An account with that email already exists. Sign in instead.' });
+    const existing = await pool.query('SELECT id FROM users WHERE lower(email)=lower($1)', [email]);
+    if (mode === 'register' && existing.rowCount) {
+      return res.status(409).json({ error: 'An account with that email already exists. Sign in instead.' });
     }
     const config = supabaseConfig(env);
     if (!config) return res.status(503).json({ error: 'Email verification is not configured on the API yet' });
     try {
-      await supabaseAuth(config, 'otp', { email, create_user: true });
+      // Existing local accounts may need their first Supabase identity link.
+      // Unknown sign-in addresses must not create orphan Auth users.
+      await supabaseAuth(config, 'otp', { email, create_user: mode === 'register' || existing.rowCount > 0 });
       return res.json({ message: 'If this address can be used, a six-digit verification code has been sent.' });
     } catch {
       return res.status(502).json({ error: 'Could not send the verification code. Check email delivery configuration and try again.' });
