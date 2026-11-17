@@ -15,8 +15,10 @@ let base;
 before(async () => {
   if (!enabled) return;
   pool = new Pool({ connectionString: process.env.DATABASE_URL });
-  const migration = await readFile(new URL('../../db/migrations/001_initial.sql', import.meta.url), 'utf8');
-  await pool.query(migration);
+  for (const name of ['001_initial.sql', '002_passwordless_auth.sql']) {
+    const migration = await readFile(new URL('../../db/migrations/' + name, import.meta.url), 'utf8');
+    await pool.query(migration);
+  }
   const app = createApp({ pool, env: { JWT_SECRET: secret, CORS_ORIGINS: 'http://localhost:5173' } });
   server = app.listen(0);
   await new Promise(resolve => server.once('listening', resolve));

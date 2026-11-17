@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { hashPassword, verifyPassword, signToken, verifyToken } from './security.js';
 import { validateRegistration, validateOperation } from './validation.js';
+import { registerOtpRoutes } from './auth-otp.js';
 
 export function createApp({ pool, env = process.env }) {
   const app = express();
@@ -26,6 +27,7 @@ export function createApp({ pool, env = process.env }) {
   };
 
   const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: 'draft-7', legacyHeaders: false });
+  registerOtpRoutes(app, { pool, env });
   app.get('/health', async (_req, res) => {
     try { await pool.query('SELECT 1'); res.json({ status: 'ok', service: 'bingwapulse-api', database: 'connected' }); }
     catch { res.status(503).json({ status: 'unavailable', service: 'bingwapulse-api' }); }
