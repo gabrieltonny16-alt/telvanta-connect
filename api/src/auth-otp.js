@@ -1,10 +1,10 @@
 import rateLimit from 'express-rate-limit';
 import { signToken } from './security.js';
 
-const emailPattern = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function supabaseConfig(env) {
-  const url = String(env.SUPABASE_URL || '').trim().replace(/\\/$/, '');
+  const url = String(env.SUPABASE_URL || '').trim().replace(/\/$/, '');
   const key = String(env.SUPABASE_PUBLISHABLE_KEY || '').trim();
   if (!url || !key) return null;
   return { url, key };
@@ -69,7 +69,7 @@ export function registerOtpRoutes(app, { pool, env }) {
     const displayName = String(req.body?.displayName || '').trim();
     const tenantName = String(req.body?.tenantName || '').trim();
     if (!emailPattern.test(email) || email.length > 254) return res.status(400).json({ error: 'Enter a valid email address' });
-    if (!/^\\d{6}$/.test(code)) return res.status(400).json({ error: 'Enter the six-digit code' });
+    if (!/^\d{6}$/.test(code)) return res.status(400).json({ error: 'Enter the six-digit code' });
     if (!['login', 'register'].includes(mode)) return res.status(400).json({ error: 'Choose sign in or create account' });
     if (mode === 'register' && (displayName.length < 2 || displayName.length > 80 || tenantName.length < 2 || tenantName.length > 120)) {
       return res.status(400).json({ error: 'Enter your name and business name' });
