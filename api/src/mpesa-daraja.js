@@ -1,6 +1,6 @@
 import { Buffer } from 'node:buffer';
 
-const KENYAN_MSISDN = /^(?:\\+?254|0)?([17]\\d{8})$/;
+const KENYAN_MSISDN = /^(?:\+?254|0)?([17]\d{8})$/;
 
 export function normalizeKenyanPhone(value) {
   const compact = String(value ?? '').replace(/[\s()-]/g, '');
