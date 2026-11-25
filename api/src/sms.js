@@ -23,7 +23,7 @@ export function createSmsClient({ env = process.env, fetchImpl = fetch } = {}) {
 
     const username = String(env.AT_USERNAME || '').trim();
     const apiKey = String(env.AT_API_KEY || '').trim();
-    if (!username || !apiKey) throw new Error('Africa\\'s Talking credentials are not configured');
+    if (!username || !apiKey) throw new Error("Africa's Talking credentials are not configured");
     const form = new URLSearchParams({ username, to: recipient, message: text });
     if (env.AT_SENDER_ID) form.set('from', String(env.AT_SENDER_ID));
     const response = await fetchImpl(AT_ENDPOINT, {
