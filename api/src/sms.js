@@ -1,10 +1,10 @@
 const AT_ENDPOINT = 'https://api.africastalking.com/version1/messaging';
 
 export function normalizeSmsRecipient(value) {
-  const compact = String(value ?? '').replace(/[\\s()-]/g, '');
-  if (/^0[17]\\d{8}$/.test(compact)) return '+254' + compact.slice(1);
-  if (/^254[17]\\d{8}$/.test(compact)) return '+' + compact;
-  if (/^\\+254[17]\\d{8}$/.test(compact)) return compact;
+  const compact = String(value ?? '').replace(/[\s()-]/g, '');
+  if (/^0[17]\d{8}$/.test(compact)) return '+254' + compact.slice(1);
+  if (/^254[17]\d{8}$/.test(compact)) return '+' + compact;
+  if (/^\+254[17]\d{8}$/.test(compact)) return compact;
   throw new Error('Enter a valid Kenyan mobile number');
 }
 
@@ -23,7 +23,7 @@ export function createSmsClient({ env = process.env, fetchImpl = fetch } = {}) {
 
     const username = String(env.AT_USERNAME || '').trim();
     const apiKey = String(env.AT_API_KEY || '').trim();
-    if (!username || !apiKey) throw new Error('Africa\'s Talking credentials are not configured');
+    if (!username || !apiKey) throw new Error('Africa\\'s Talking credentials are not configured');
     const form = new URLSearchParams({ username, to: recipient, message: text });
     if (env.AT_SENDER_ID) form.set('from', String(env.AT_SENDER_ID));
     const response = await fetchImpl(AT_ENDPOINT, {
@@ -33,10 +33,11 @@ export function createSmsClient({ env = process.env, fetchImpl = fetch } = {}) {
       signal: AbortSignal.timeout(15_000)
     });
     const payload = await response.json().catch(() => ({}));
-    if (!response.ok || payload.SMSMessageData?.Recipients?.some(item => Number(item.statusCode) !== 101)) {
+    const recipients = payload.SMSMessageData?.Recipients;
+    if (!response.ok || !Array.isArray(recipients) || recipients.length !== 1 || Number(recipients[0].statusCode) !== 101) {
       throw new Error('SMS provider did not accept the message');
     }
-    return { mode, accepted: true, simulated: false, recipient, providerMessageId: payload.SMSMessageData?.Recipients?.[0]?.messageId || null };
+    return { mode, accepted: true, simulated: false, recipient, providerMessageId: recipients[0].messageId || null };
   }
 
   return { mode, send };

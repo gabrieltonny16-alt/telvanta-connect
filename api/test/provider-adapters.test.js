@@ -10,9 +10,9 @@ test('normalizes Kenyan mobile numbers', () => {
   assert.throws(() => normalizeKenyanPhone('12345'));
 });
 
-test('builds deterministic Daraja timestamp and password', () => {
-  assert.equal(darajaTimestamp(new Date('2026-11-25T12:34:56Z')), '20261125123456');
-  assert.equal(buildStkPassword('174379', 'pass', '20261125123456'), Buffer.from('174379pass20261125123456').toString('base64'));
+test('builds deterministic Daraja timestamp and password in Nairobi time', () => {
+  assert.equal(darajaTimestamp(new Date('2026-11-25T12:34:56Z')), '20261125153456');
+  assert.equal(buildStkPassword('174379', 'pass', '20261125153456'), Buffer.from('174379pass20261125153456').toString('base64'));
 });
 
 test('production M-PESA is locked by default', () => {
@@ -20,16 +20,24 @@ test('production M-PESA is locked by default', () => {
 });
 
 test('STK acknowledgement is pending, not proof of payment', async () => {
-  const fakeFetch = async url => url.includes('/oauth/')
-    ? { ok: true, json: async () => ({ access_token: 'token', expires_in: '3600' }) }
-    : { ok: true, json: async () => ({ CheckoutRequestID: 'checkout-1' }) };
+  const calls = [];
+  const fakeFetch = async (url, options = {}) => {
+    calls.push({ url, options });
+    return url.includes('/oauth/')
+      ? { ok: true, json: async () => ({ access_token: 'token', expires_in: '3600' }) }
+      : { ok: true, json: async () => ({ CheckoutRequestID: 'checkout-1' }) };
+  };
   const client = createDarajaClient({ env: {
     MPESA_ENV: 'sandbox', MPESA_CONSUMER_KEY: 'key', MPESA_CONSUMER_SECRET: 'secret',
-    MPESA_SHORTCODE: '174379', MPESA_PASSKEY: 'pass', MPESA_MAX_AMOUNT_KES: '100'
-  }, fetchImpl: fakeFetch });
+    MPESA_SHORTCODE: '174379', MPESA_TILL_NUMBER: '1561763', MPESA_PASSKEY: 'pass', MPESA_MAX_AMOUNT_KES: '100'
+  }, fetchImpl: fakeFetch, now: () => new Date('2026-11-25T12:34:56Z') });
   const result = await client.stkPush({ phone: '0712345678', amountKes: 10, callbackUrl: 'https://example.test/callback' });
   assert.equal(result.status, 'PENDING');
   assert.equal(result.checkoutRequestId, 'checkout-1');
+  assert.equal(calls.length, 2);
+  const requestBody = JSON.parse(calls[1].options.body);
+  assert.equal(requestBody.Amount, 10);
+  assert.equal(requestBody.PartyB, '1561763');
   await assert.rejects(() => client.stkPush({ phone: '0712345678', amountKes: 101, callbackUrl: 'https://example.test/callback' }), /Amount/);
 });
 

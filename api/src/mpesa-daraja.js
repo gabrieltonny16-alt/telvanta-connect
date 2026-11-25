@@ -1,22 +1,27 @@
 import { Buffer } from 'node:buffer';
 
-const KENYAN_MSISDN = /^(?:254|0)?([17]\\d{8})$/;
+const KENYAN_MSISDN = /^(?:254|0)?([17]\d{8})$/;
 
 export function normalizeKenyanPhone(value) {
-  const compact = String(value ?? '').replace(/[\\s()-]/g, '');
+  const compact = String(value ?? '').replace(/[\s()-]/g, '');
   const match = compact.match(KENYAN_MSISDN);
   if (!match) throw new Error('Enter a valid Kenyan mobile number');
   return '254' + match[1];
 }
 
 export function darajaTimestamp(date = new Date()) {
-  const pad = value => String(value).padStart(2, '0');
-  return date.getFullYear() + pad(date.getMonth() + 1) + pad(date.getDate()) +
-    pad(date.getHours()) + pad(date.getMinutes()) + pad(date.getSeconds());
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Africa/Nairobi',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hourCycle: 'h23'
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+  return values.year + values.month + values.day + values.hour + values.minute + values.second;
 }
 
 export function buildStkPassword(shortCode, passkey, timestamp) {
-  if (!shortCode || !passkey || !/^\\d{14}$/.test(String(timestamp))) {
+  if (!shortCode || !passkey || !/^\d{14}$/.test(String(timestamp))) {
     throw new Error('M-PESA shortcode, passkey and timestamp are required');
   }
   return Buffer.from(String(shortCode) + String(passkey) + String(timestamp)).toString('base64');
@@ -24,7 +29,7 @@ export function buildStkPassword(shortCode, passkey, timestamp) {
 
 function required(env, key) {
   const value = String(env[key] ?? '').trim();
-  if (!value) throw new Error(`Missing M-PESA configuration: ${key}`);
+  if (!value) throw new Error(\`Missing M-PESA configuration: \${key}\`);
   return value;
 }
 
@@ -58,10 +63,13 @@ export function createDarajaClient({ env = process.env, fetchImpl = fetch, now =
     const amount = Number(amountKes);
     const maxAmount = Number(env.MPESA_MAX_AMOUNT_KES || 1000);
     if (!Number.isSafeInteger(amount) || amount < 1 || amount > maxAmount) {
-      throw new Error(`Amount must be a whole KES amount between 1 and ${maxAmount}`);
+      throw new Error(\`Amount must be a whole KES amount between 1 and \${maxAmount}\`);
     }
-    if (!/^https:\\/\\//i.test(String(callbackUrl || ''))) throw new Error('A public HTTPS callback URL is required');
+    let callback;
+    try { callback = new URL(String(callbackUrl || '')); } catch {}
+    if (callback?.protocol !== 'https:') throw new Error('A public HTTPS callback URL is required');
     const shortCode = required(env, 'MPESA_SHORTCODE');
+    const tillNumber = required(env, 'MPESA_TILL_NUMBER');
     const passkey = required(env, 'MPESA_PASSKEY');
     const timestamp = darajaTimestamp(now());
     const token = await accessToken();
@@ -72,9 +80,9 @@ export function createDarajaClient({ env = process.env, fetchImpl = fetch, now =
       TransactionType: env.MPESA_TRANSACTION_TYPE || 'CustomerBuyGoodsOnline',
       Amount: amount,
       PartyA: msisdn,
-      PartyB: shortCode,
+      PartyB: tillNumber,
       PhoneNumber: msisdn,
-      CallBackURL: callbackUrl,
+      CallBackURL: callback.toString(),
       AccountReference: String(accountReference || 'BINGWAPULSE').slice(0, 12),
       TransactionDesc: String(description || 'BingwaPulse order').slice(0, 13)
     };
