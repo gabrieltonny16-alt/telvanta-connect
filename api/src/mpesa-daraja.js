@@ -29,7 +29,7 @@ export function buildStkPassword(shortCode, passkey, timestamp) {
 
 function required(env, key) {
   const value = String(env[key] ?? '').trim();
-  if (!value) throw new Error(\`Missing M-PESA configuration: \${key}\`);
+  if (!value) throw new Error('Missing M-PESA configuration: ' + key);
   return value;
 }
 
@@ -63,7 +63,7 @@ export function createDarajaClient({ env = process.env, fetchImpl = fetch, now =
     const amount = Number(amountKes);
     const maxAmount = Number(env.MPESA_MAX_AMOUNT_KES || 1000);
     if (!Number.isSafeInteger(amount) || amount < 1 || amount > maxAmount) {
-      throw new Error(\`Amount must be a whole KES amount between 1 and \${maxAmount}\`);
+      throw new Error('Amount must be a whole KES amount between 1 and ' + maxAmount);
     }
     let callback;
     try { callback = new URL(String(callbackUrl || '')); } catch {}
